@@ -19,7 +19,7 @@ void InitESPNow() {
   }
 }
 
-void ScanForSlave() {
+void scanforSlave() {
   int8_t scanResults = WiFi.scanNetworks();
   bool slaveFound = 0;  // reset on each scan
   memset(&slave, 0, sizeof(slave));
@@ -100,12 +100,11 @@ void deletePeer() {
 // send data
 void sendData() {
   static int cnt = 0;
-  uint8_t data[2];
-  data[0] = cnt;
-  data[1] = 100;
+  uint8_t data[1];
+  data[0] = (M5.BtnA.isPressed() ? 1 : 0);
   const uint8_t *peer_addr = slave.peer_addr;
-  Serial.print("Sending: "); //Serial.println(data);
-  esp_err_t result = esp_now_send(peer_addr, data, 2);
+  Serial.print("Sending: "); Serial.println(data[0]);
+  esp_err_t result = esp_now_send(peer_addr, data, 1);
   cnt++;
   Serial.print("Send Status: ");
   if (result == ESP_OK) {
@@ -126,18 +125,31 @@ void setup()
   Serial.println("setup");
 }
 
-void loop()
+bool keepConnection()
 {
   if (slave.channel == CHANNEL) { 
     bool isPaired = manageSlave();
     if (isPaired) {
-      sendData();
+      return true;
     } else {
-      Serial.println("Slave pair failed!");
+      Serial.println("slave pair failed!");
     }
   }
   else {
-    ScanForSlave();
+    scanforSlave();
   }
+  return false;
+}
+
+void loop()
+{
+  if(keepConnection()){
+    sendData();
+  }
+
+  M5.update();
+  M5.Lcd.setCursor(0, 0);
+  M5.Lcd.print("BtnA.isPressed():");
+  M5.Lcd.println(M5.BtnA.isPressed());
   delay(20);
 }
