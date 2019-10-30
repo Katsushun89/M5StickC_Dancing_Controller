@@ -8,6 +8,8 @@ esp_now_peer_info_t slave;
 #define PRINTSCANRESULTS 0
 #define DELETEBEFOREPAIR 0
 
+bool is_shaked = false;
+
 void InitESPNow() {
   WiFi.disconnect();
   if (esp_now_init() == ESP_OK) {
@@ -101,7 +103,13 @@ void deletePeer() {
 void sendData() {
   static int cnt = 0;
   uint8_t data[1];
+#if 0
+  //button
   data[0] = (M5.BtnA.isPressed() ? 1 : 0);
+#else
+  //shake
+  data[0] = is_shaked;
+#endif
   const uint8_t *peer_addr = slave.peer_addr;
   Serial.print("Sending: "); Serial.println(data[0]);
   esp_err_t result = esp_now_send(peer_addr, data, 1);
@@ -117,6 +125,11 @@ void sendData() {
 void setup()
 {
   M5.begin();
+  M5.Lcd.setRotation(3);
+  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextSize(1);
+ 
+  M5.MPU6886.Init();
 
   Serial.begin(115200);
   WiFi.mode(WIFI_STA);
@@ -141,15 +154,54 @@ bool keepConnection()
   return false;
 }
 
+void checkIMU()
+{
+  const float SHAKE_THRESHOLD = 1200;
+  float accX = 0;
+  float accY = 0;
+  float accZ = 0;
+
+  M5.MPU6886.getAccelData(&accX, &accY, &accZ);
+  M5.Lcd.setCursor(0, 10);
+  M5.Lcd.println("  X       Y       Z");
+  M5.Lcd.setCursor(0, 20);
+  M5.Lcd.printf("%.2f   %.2f   %.2f      ", accX * 1000, accY * 1000, accZ * 1000);
+
+  double x = accX * 1000;
+  double y = accY * 1000;
+  double z = accZ * 1000;
+
+  double norm = sqrt(x * x + y * y + z * z);
+
+  M5.Lcd.setCursor(0, 30);
+  M5.Lcd.printf("norm %.2lf", norm);
+
+  if(norm > SHAKE_THRESHOLD){
+    is_shaked = true;
+  }else{
+    is_shaked = false;
+  }
+}
+
 void loop()
 {
+  M5.update();
+
+  M5.Lcd.setCursor(0, 0);
+#if 0
+  M5.Lcd.print("BtnA.Pressed:");
+  M5.Lcd.println(M5.BtnA.isPressed());
+#else
+  M5.Lcd.print("isShaked:");
+  M5.Lcd.println(is_shaked);
+#endif
+ 
+  checkIMU();
+#if 1 
   if(keepConnection()){
     sendData();
   }
+#endif
 
-  M5.update();
-  M5.Lcd.setCursor(0, 0);
-  M5.Lcd.print("BtnA.isPressed():");
-  M5.Lcd.println(M5.BtnA.isPressed());
-  delay(20);
+ delay(100);
 }
