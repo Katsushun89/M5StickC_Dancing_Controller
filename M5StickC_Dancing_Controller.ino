@@ -8,6 +8,8 @@ esp_now_peer_info_t slave;
 #define PRINTSCANRESULTS 0
 #define DELETEBEFOREPAIR 0
 
+//#define USE_BUTTON
+
 bool is_shaked = false;
 
 void InitESPNow() {
@@ -103,7 +105,7 @@ void deletePeer() {
 void sendData() {
   static int cnt = 0;
   uint8_t data[1];
-#if 0
+#ifdef USE_BUTTON 
   //button
   data[0] = (M5.BtnA.isPressed() ? 1 : 0);
 #else
@@ -188,7 +190,7 @@ void loop()
   M5.update();
 
   M5.Lcd.setCursor(0, 0);
-#if 0
+#ifdef USE_BUTTON 
   M5.Lcd.print("BtnA.Pressed:");
   M5.Lcd.println(M5.BtnA.isPressed());
 #else
@@ -197,11 +199,9 @@ void loop()
 #endif
  
   checkIMU();
-#if 1 
   if(keepConnection()){
     sendData();
   }
-#endif
 
  delay(100);
 }
